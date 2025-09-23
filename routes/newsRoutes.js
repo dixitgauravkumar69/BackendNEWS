@@ -5,16 +5,18 @@ const News = require("../models/News");
 
 const router = express.Router();
 
-// Serve uploads publicly (this ensures URLs like https://yourdomain.com/uploads/filename.png work)
-router.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
+// Serve uploads publicly from project root
+router.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 const backendUrl = process.env.BACKEND_URL || "https://backendnews-h3lh.onrender.com";
 
-// Multer setup for uploading images
+// Multer setup
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
+  filename: (req, file, cb) => {
+    const safeName = file.originalname.replace(/\s+/g, "-");
+    cb(null, Date.now() + "-" + safeName);
+  },
 });
 const upload = multer({ storage });
 
@@ -45,22 +47,19 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Shareable news page for WhatsApp/Facebook
+// Shareable news page
 router.get("/share/:id", async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
     if (!news) return res.status(404).send("News not found");
 
-    // OG image logic
-    let ogImage = news.imageUrl || `${backendUrl}/default-image.png`;
+    const ogImage = news.imageUrl || `${backendUrl}/default-image.png`;
     const shortDesc = news.description.length > 150
       ? news.description.substring(0, 147) + "..."
       : news.description;
 
-    // URL to actual news page on your frontend
     const newsPageUrl = `${backendUrl}/news/${news._id}`;
 
-    // HTML with OG meta tags and instant redirect
     const html = `
       <!doctype html>
       <html lang="en">
@@ -69,20 +68,17 @@ router.get("/share/:id", async (req, res) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>${news.title}</title>
 
-        <!-- Open Graph / Facebook -->
         <meta property="og:type" content="article" />
         <meta property="og:title" content="${news.title}" />
         <meta property="og:description" content="${shortDesc}" />
         <meta property="og:image" content="${ogImage}" />
         <meta property="og:url" content="${newsPageUrl}" />
 
-        <!-- Twitter Card -->
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="${news.title}" />
         <meta name="twitter:description" content="${shortDesc}" />
         <meta name="twitter:image" content="${ogImage}" />
 
-        <!-- Redirect user to actual news page -->
         <meta http-equiv="refresh" content="0; url=${newsPageUrl}" />
       </head>
       <body>
