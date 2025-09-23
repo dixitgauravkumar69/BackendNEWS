@@ -5,90 +5,54 @@ const News = require("../models/News");
 
 const router = express.Router();
 
-const backendUrl = process.env.BACKEND_URL || "https://backendnews-h3lh.onrender.com";
-
-// Multer setup
+// Multer storage
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, "../uploads")),
-  filename: (req, file, cb) => {
-    const safeName = file.originalname.replace(/\s+/g, "-"); // Replace spaces
-    cb(null, Date.now() + "-" + safeName);
-  },
+  destination: (req, file, cb) => cb(null, "uploads/"),
+  filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
 });
 const upload = multer({ storage });
 
-// Add news
+// Upload news
 router.post("/", upload.single("image"), async (req, res) => {
   try {
-    const newNews = new News({
+    const news = new News({
       title: req.body.title,
       description: req.body.description,
-      imageUrl: req.file ? `${backendUrl}/uploads/${req.file.filename}` : null,
-      videoUrl: req.body.videoUrl || null,
+      image: `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`,
+      video: req.body.video || "",
     });
-    await newNews.save();
-    res.json(newNews);
+    await news.save();
+    res.status(201).json(news);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to add news" });
+    res.status(500).json({ error: err.message });
   }
 });
 
 // Get all news
 router.get("/", async (req, res) => {
-  try {
-    const news = await News.find().sort({ createdAt: -1 });
-    res.json(news);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch news" });
-  }
+  const news = await News.find().sort({ createdAt: -1 });
+  res.json(news);
 });
 
-// Shareable news page for WhatsApp/Facebook
-router.get("/share/:id", async (req, res) => {
-  try {
-    const news = await News.findById(req.params.id);
-    if (!news) return res.status(404).send("News not found");
+// Preview page for OG tags
+router.get("/:id/preview", async (req, res) => {
+  const news = await News.findById(req.params.id);
+  if (!news) return res.status(404).send("News not found");
 
-    const ogImage = news.imageUrl || `${backendUrl}/default-image.png`;
-    const shortDesc = news.description.length > 150
-      ? news.description.substring(0, 147) + "..."
-      : news.description;
-
-    const newsPageUrl = `${backendUrl}/news/${news._id}`;
-
-    const html = `
-      <!doctype html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>${news.title}</title>
-
-        <meta property="og:type" content="article" />
-        <meta property="og:title" content="${news.title}" />
-        <meta property="og:description" content="${shortDesc}" />
-        <meta property="og:image" content="${ogImage}" />
-        <meta property="og:url" content="${newsPageUrl}" />
-
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="${news.title}" />
-        <meta name="twitter:description" content="${shortDesc}" />
-        <meta name="twitter:image" content="${ogImage}" />
-
-        <meta http-equiv="refresh" content="0; url=${newsPageUrl}" />
-      </head>
-      <body>
-        <p>Redirecting to <a href="${newsPageUrl}">${news.title}</a>...</p>
-      </body>
-      </html>
-    `;
-    res.send(html);
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Error generating preview");
-  }
+  res.send(`
+    <html>
+    <head>
+      <meta property="og:title" content="${news.title}" />
+      <meta property="og:description" content="${news.description}" />
+      <meta property="og:image" content="${news.image}" />
+      <meta property="og:url" content="https://yourfrontend.vercel.app/news/${news._id}" />
+      <meta property="og:type" content="website" />
+    </head>
+    <body>
+      <script>window.location.href="https://yourfrontend.vercel.app/news/${news._id}"</script>
+    </body>
+    </html>
+  `);
 });
 
 module.exports = router;
