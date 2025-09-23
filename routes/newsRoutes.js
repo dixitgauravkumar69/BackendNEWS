@@ -40,9 +40,10 @@ router.post("/", upload.fields([{ name: "image" }, { name: "video" }]), async (r
     await news.save();
     res.status(201).json(news);
   } catch (err) {
-    console.error("Upload error:", err.message);
-    res.status(500).json({ error: err.message });
-  }
+  console.error("Upload error:", err); // pure object
+  res.status(500).json({ error: err.message, stack: err.stack });
+}
+
 });
 
 // ✅ Get all news
