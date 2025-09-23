@@ -7,7 +7,7 @@ const fs = require("fs");
 require("dotenv").config();
 
 const app = express();
-const newsRoutes = require("./routes/news");
+const newsRoutes = require("./routes/newsRoutes");
 
 // Ensure uploads folder exists
 const uploadDir = path.join(__dirname, "uploads");
