@@ -13,40 +13,37 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// ✅ Multer Storage (Cloudinary)
+// ✅ Multer Cloudinary Storage
 const storage = new CloudinaryStorage({
   cloudinary,
-  params: async (req, file) => {
-    let folder = "news_uploads";
-    return {
-      folder,
-      resource_type: file.mimetype.startsWith("video") ? "video" : "image",
-      public_id: Date.now().toString(),
-    };
-  },
+  params: async (req, file) => ({
+    folder: "news_uploads",
+    resource_type: file.mimetype.startsWith("video") ? "video" : "image",
+    public_id: Date.now().toString()
+  }),
 });
 const upload = multer({ storage });
 
 // ✅ Upload news (image + video)
 router.post("/", upload.fields([{ name: "image" }, { name: "video" }]), async (req, res) => {
   try {
+    // Properly log uploaded files
     console.log("Uploaded files:", JSON.stringify(req.files, null, 2));
 
     const news = new News({
       title: req.body.title,
       description: req.body.description,
-      image: req.files["image"] ? req.files["image"][0].path : "",
-      video: req.files["video"] ? req.files["video"][0].path : "",
+      image: req.files?.image?.[0]?.path || "",
+      video: req.files?.video?.[0]?.path || ""
     });
 
     await news.save();
     res.status(201).json(news);
   } catch (err) {
-    console.error("Upload error:", err);
+    console.error("Upload error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
-
 
 // ✅ Get all news
 router.get("/", async (req, res) => {
@@ -58,17 +55,20 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ✅ Preview page (for WhatsApp / OG Tags)
+// ✅ Preview page for WhatsApp / OG Tags
 router.get("/:id/preview", async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
     if (!news) return res.status(404).send("News not found");
 
+    // Escape quotes in description to prevent HTML break
+    const descriptionSafe = news.description.replace(/"/g, "&quot;");
+
     res.send(`
       <html>
       <head>
         <meta property="og:title" content="${news.title}" />
-        <meta property="og:description" content="${news.description}" />
+        <meta property="og:description" content="${descriptionSafe}" />
         <meta property="og:image" content="${news.image}" />
         <meta property="og:url" content="https://backendnews-h3lh.onrender.com/news/${news._id}" />
         <meta property="og:type" content="website" />
@@ -81,6 +81,7 @@ router.get("/:id/preview", async (req, res) => {
       </html>
     `);
   } catch (err) {
+    console.error("Preview error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
