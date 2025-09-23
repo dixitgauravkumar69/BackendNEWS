@@ -1,26 +1,42 @@
 const express = require("express");
 const multer = require("multer");
-const path = require("path");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const cloudinary = require("cloudinary").v2;
 const News = require("../models/News");
 
 const router = express.Router();
 
-// Multer storage
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
+// ✅ Cloudinary Config
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// ✅ Multer Storage (Cloudinary)
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: async (req, file) => {
+    let folder = "news_uploads";
+    return {
+      folder,
+      resource_type: file.mimetype.startsWith("video") ? "video" : "image",
+      public_id: Date.now().toString(),
+    };
+  },
 });
 const upload = multer({ storage });
 
-// Upload news
-router.post("/", upload.single("image"), async (req, res) => {
+// ✅ Upload news (image + video)
+router.post("/", upload.fields([{ name: "image" }, { name: "video" }]), async (req, res) => {
   try {
     const news = new News({
       title: req.body.title,
       description: req.body.description,
-      image: `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`,
-      video: req.body.video || "",
+      image: req.files["image"] ? req.files["image"][0].path : "",
+      video: req.files["video"] ? req.files["video"][0].path : "",
     });
+
     await news.save();
     res.status(201).json(news);
   } catch (err) {
@@ -28,31 +44,41 @@ router.post("/", upload.single("image"), async (req, res) => {
   }
 });
 
-// Get all news
+// ✅ Get all news
 router.get("/", async (req, res) => {
-  const news = await News.find().sort({ createdAt: -1 });
-  res.json(news);
+  try {
+    const news = await News.find().sort({ createdAt: -1 });
+    res.json(news);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// Preview page for OG tags
+// ✅ Preview page (for WhatsApp / OG Tags)
 router.get("/:id/preview", async (req, res) => {
-  const news = await News.findById(req.params.id);
-  if (!news) return res.status(404).send("News not found");
+  try {
+    const news = await News.findById(req.params.id);
+    if (!news) return res.status(404).send("News not found");
 
-  res.send(`
-    <html>
-    <head>
-      <meta property="og:title" content="${news.title}" />
-      <meta property="og:description" content="${news.description}" />
-      <meta property="og:image" content="${news.image}" />
-      <meta property="og:url" content="https://backendnews-h3lh.onrender.com/news/${news._id}" />
-      <meta property="og:type" content="website" />
-    </head>
-    <body>
-      <script>window.location.href="https://frontend-news-tau.vercel.app/${news._id}"</script>
-    </body>
-    </html>
-  `);
+    res.send(`
+      <html>
+      <head>
+        <meta property="og:title" content="${news.title}" />
+        <meta property="og:description" content="${news.description}" />
+        <meta property="og:image" content="${news.image}" />
+        <meta property="og:url" content="https://backendnews-h3lh.onrender.com/news/${news._id}" />
+        <meta property="og:type" content="website" />
+      </head>
+      <body>
+        <script>
+          window.location.href="https://frontend-news-tau.vercel.app/${news._id}"
+        </script>
+      </body>
+      </html>
+    `);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;
