@@ -5,14 +5,17 @@ const News = require("../models/News");
 
 const router = express.Router();
 
+// Serve uploaded images publicly
 router.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
+// Multer storage config
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "uploads/"),
   filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
 });
 const upload = multer({ storage });
 
+// Add news
 router.post("/", upload.single("image"), async (req, res) => {
   try {
     const newNews = new News({
@@ -29,6 +32,7 @@ router.post("/", upload.single("image"), async (req, res) => {
   }
 });
 
+// Get all news
 router.get("/", async (req, res) => {
   try {
     const news = await News.find().sort({ createdAt: -1 });
@@ -38,6 +42,7 @@ router.get("/", async (req, res) => {
   }
 });
 
+// Get news by ID
 router.get("/:id", async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
@@ -48,12 +53,19 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// Shareable news page (for WhatsApp/Facebook previews)
 router.get("/share/:id", async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
     if (!news) return res.status(404).send("News not found");
 
     const backendUrl = process.env.BACKEND_URL || "https://backendnews-h3lh.onrender.com";
+
+    // Ensure image URL is absolute
+    const imageUrl = news.imageUrl ? backendUrl + news.imageUrl : backendUrl + "/default-image.png";
+
+    // Shorten description for meta tag
+    const shortDesc = news.description.length > 150 ? news.description.substring(0, 147) + "..." : news.description;
 
     const html = `
       <!doctype html>
@@ -62,22 +74,31 @@ router.get("/share/:id", async (req, res) => {
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>${news.title}</title>
-        <meta property="og:title" content="${news.title}" />
-        <meta property="og:description" content="${news.description.substring(0, 100)}..." />
-        <meta property="og:image" content="${news.imageUrl ? backendUrl + news.imageUrl : backendUrl + '/default-image.png'}" />
-        <meta property="og:url" content="${backendUrl}/api/news/share/${news._id}" />
+
+        <!-- Open Graph / Facebook -->
         <meta property="og:type" content="article" />
+        <meta property="og:title" content="${news.title}" />
+        <meta property="og:description" content="${shortDesc}" />
+        <meta property="og:image" content="${imageUrl}" />
+        <meta property="og:url" content="${backendUrl}/api/news/share/${news._id}" />
+
+        <!-- Twitter Card -->
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="${news.title}" />
+        <meta name="twitter:description" content="${shortDesc}" />
+        <meta name="twitter:image" content="${imageUrl}" />
       </head>
       <body>
         <h2>${news.title}</h2>
         <p>${news.description}</p>
-        ${news.imageUrl ? `<img src="${backendUrl}${news.imageUrl}" width="300"/>` : ""}
-        ${news.videoUrl ? `<iframe width="400" height="250" src="${news.videoUrl}" title="video"></iframe>` : ""}
+        ${news.imageUrl ? `<img src="${imageUrl}" width="300"/>` : ""}
+        ${news.videoUrl ? `<iframe width="400" height="250" src="${news.videoUrl}" title="video" frameborder="0" allowfullscreen></iframe>` : ""}
       </body>
       </html>
     `;
     res.send(html);
   } catch (err) {
+    console.error(err);
     res.status(500).send("Error generating preview");
   }
 });
