@@ -49,7 +49,7 @@ router.get("/:id/preview", async (req, res) => {
       <meta property="og:type" content="website" />
     </head>
     <body>
-      <script>window.location.href="https://frontend-news-tau.vercel.app/news/${news._id}"</script>
+      <script>window.location.href="https://frontend-news-tau.vercel.app/${news._id}"</script>
     </body>
     </html>
   `);
