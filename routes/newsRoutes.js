@@ -8,6 +8,8 @@ const router = express.Router();
 // Serve uploaded images publicly
 router.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
+const backendUrl = process.env.BACKEND_URL || "https://backendnews-h3lh.onrender.com";
+
 // Multer storage config
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "uploads/"),
@@ -21,7 +23,8 @@ router.post("/", upload.single("image"), async (req, res) => {
     const newNews = new News({
       title: req.body.title,
       description: req.body.description,
-      imageUrl: req.file ? `/uploads/${req.file.filename}` : null,
+      // Save full URL in DB for easier frontend use
+      imageUrl: req.file ? `${backendUrl}/uploads/${req.file.filename}` : null,
       videoUrl: req.body.videoUrl || null,
     });
     await newNews.save();
@@ -59,13 +62,10 @@ router.get("/share/:id", async (req, res) => {
     const news = await News.findById(req.params.id);
     if (!news) return res.status(404).send("News not found");
 
-    const backendUrl = process.env.BACKEND_URL || "https://backendnews-h3lh.onrender.com";
-
-    // Ensure image URL is absolute
-    const imageUrl = news.imageUrl ? backendUrl + news.imageUrl : backendUrl + "/default-image.png";
-
-    // Shorten description for meta tag
-    const shortDesc = news.description.length > 150 ? news.description.substring(0, 147) + "..." : news.description;
+    const imageUrl = news.imageUrl || `${backendUrl}/default-image.png`;
+    const shortDesc = news.description.length > 150
+      ? news.description.substring(0, 147) + "..."
+      : news.description;
 
     const html = `
       <!doctype html>
@@ -91,7 +91,7 @@ router.get("/share/:id", async (req, res) => {
       <body>
         <h2>${news.title}</h2>
         <p>${news.description}</p>
-        ${news.imageUrl ? `<img src="${imageUrl}" width="300"/>` : ""}
+        <img src="${imageUrl}" width="300" />
         ${news.videoUrl ? `<iframe width="400" height="250" src="${news.videoUrl}" title="video" frameborder="0" allowfullscreen></iframe>` : ""}
       </body>
       </html>
