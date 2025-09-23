@@ -1,17 +1,18 @@
 const express = require("express");
 const multer = require("multer");
+const path = require("path");
 const News = require("../models/News");
 
 const router = express.Router();
 
-// ✅ Multer storage config
+router.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "uploads/"),
   filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
 });
 const upload = multer({ storage });
 
-// ✅ Add news
 router.post("/", upload.single("image"), async (req, res) => {
   try {
     const newNews = new News({
@@ -20,7 +21,6 @@ router.post("/", upload.single("image"), async (req, res) => {
       imageUrl: req.file ? `/uploads/${req.file.filename}` : null,
       videoUrl: req.body.videoUrl || null,
     });
-
     await newNews.save();
     res.json(newNews);
   } catch (err) {
@@ -29,7 +29,6 @@ router.post("/", upload.single("image"), async (req, res) => {
   }
 });
 
-// ✅ Get all news
 router.get("/", async (req, res) => {
   try {
     const news = await News.find().sort({ createdAt: -1 });
@@ -39,7 +38,6 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ✅ Get single news
 router.get("/:id", async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
@@ -50,7 +48,6 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// ✅ OG Preview Share route
 router.get("/share/:id", async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
@@ -67,7 +64,7 @@ router.get("/share/:id", async (req, res) => {
         <title>${news.title}</title>
         <meta property="og:title" content="${news.title}" />
         <meta property="og:description" content="${news.description.substring(0, 100)}..." />
-        <meta property="og:image" content="${backendUrl}${news.imageUrl || '/default-image.png'}" />
+        <meta property="og:image" content="${news.imageUrl ? backendUrl + news.imageUrl : backendUrl + '/default-image.png'}" />
         <meta property="og:url" content="${backendUrl}/api/news/share/${news._id}" />
         <meta property="og:type" content="article" />
       </head>
