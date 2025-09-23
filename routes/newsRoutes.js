@@ -56,7 +56,7 @@ router.get("/share/:id", async (req, res) => {
     const news = await News.findById(req.params.id);
     if (!news) return res.status(404).send("News not found");
 
-    const backendUrl = process.env.BACKEND_URL || "http://localhost:5000";
+    const backendUrl = process.env.BACKEND_URL || "https://backendnews-h3lh.onrender.com";
 
     const html = `
       <!doctype html>
@@ -67,7 +67,7 @@ router.get("/share/:id", async (req, res) => {
         <title>${news.title}</title>
         <meta property="og:title" content="${news.title}" />
         <meta property="og:description" content="${news.description.substring(0, 100)}..." />
-        <meta property="og:image" content="${backendUrl}${news.imageUrl}" />
+        <meta property="og:image" content="${backendUrl}${news.imageUrl || '/default-image.png'}" />
         <meta property="og:url" content="${backendUrl}/api/news/share/${news._id}" />
         <meta property="og:type" content="article" />
       </head>
