@@ -30,6 +30,8 @@ const upload = multer({ storage });
 // ✅ Upload news (image + video)
 router.post("/", upload.fields([{ name: "image" }, { name: "video" }]), async (req, res) => {
   try {
+    console.log("Uploaded files:", JSON.stringify(req.files, null, 2));
+
     const news = new News({
       title: req.body.title,
       description: req.body.description,
@@ -40,9 +42,11 @@ router.post("/", upload.fields([{ name: "image" }, { name: "video" }]), async (r
     await news.save();
     res.status(201).json(news);
   } catch (err) {
+    console.error("Upload error:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // ✅ Get all news
 router.get("/", async (req, res) => {
