@@ -45,11 +45,11 @@ router.get("/:id/preview", async (req, res) => {
       <meta property="og:title" content="${news.title}" />
       <meta property="og:description" content="${news.description}" />
       <meta property="og:image" content="${news.image}" />
-      <meta property="og:url" content="https://yourfrontend.vercel.app/news/${news._id}" />
+      <meta property="og:url" content="https://backendnews-h3lh.onrender.com/news/${news._id}" />
       <meta property="og:type" content="website" />
     </head>
     <body>
-      <script>window.location.href="https://yourfrontend.vercel.app/news/${news._id}"</script>
+      <script>window.location.href="https://frontend-news-tau.vercel.app/news/${news._id}"</script>
     </body>
     </html>
   `);
