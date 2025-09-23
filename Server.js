@@ -2,18 +2,22 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
 
 require("dotenv").config();
 
 const app = express();
-const newsRoutes = require("./routes/newsRoutes");
+const newsRoutes = require("./routes/news");
 
-// Middleware
+// Ensure uploads folder exists
+const uploadDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+
 app.use(cors());
 app.use(express.json());
 
 // Serve uploads folder publicly
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/uploads", express.static(uploadDir));
 
 // Connect MongoDB
 mongoose
@@ -21,21 +25,20 @@ mongoose
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// API Routes
+// API routes
 app.use("/api/news", newsRoutes);
 
 // Serve frontend in production
 if (process.env.NODE_ENV === "production") {
   const __dirname1 = path.resolve();
   app.use(express.static(path.join(__dirname1, "/frontend/dist")));
-
   app.get("*", (req, res) =>
     res.sendFile(path.resolve(__dirname1, "frontend", "dist", "index.html"))
   );
 }
 
 // Test route
-app.get("/", (req, res) => res.send("SERVER STARTED----"));
+app.get("/", (req, res) => res.send("SERVER STARTED"));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

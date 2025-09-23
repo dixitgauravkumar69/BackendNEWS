@@ -5,16 +5,13 @@ const News = require("../models/News");
 
 const router = express.Router();
 
-// Serve uploads publicly from project root
-router.use("/uploads", express.static(path.join(__dirname, "../uploads")));
-
 const backendUrl = process.env.BACKEND_URL || "https://backendnews-h3lh.onrender.com";
 
 // Multer setup
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
+  destination: (req, file, cb) => cb(null, path.join(__dirname, "../uploads")),
   filename: (req, file, cb) => {
-    const safeName = file.originalname.replace(/\s+/g, "-");
+    const safeName = file.originalname.replace(/\s+/g, "-"); // Replace spaces
     cb(null, Date.now() + "-" + safeName);
   },
 });
@@ -47,7 +44,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Shareable news page
+// Shareable news page for WhatsApp/Facebook
 router.get("/share/:id", async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
