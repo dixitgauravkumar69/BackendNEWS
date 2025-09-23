@@ -5,12 +5,12 @@ const News = require("../models/News");
 
 const router = express.Router();
 
-// Serve uploaded images publicly
+// Serve uploads publicly (this ensures URLs like https://yourdomain.com/uploads/filename.png work)
 router.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 const backendUrl = process.env.BACKEND_URL || "https://backendnews-h3lh.onrender.com";
 
-// Multer storage config
+// Multer setup for uploading images
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "uploads/"),
   filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
@@ -23,7 +23,6 @@ router.post("/", upload.single("image"), async (req, res) => {
     const newNews = new News({
       title: req.body.title,
       description: req.body.description,
-      // Save full URL in DB for easier frontend use
       imageUrl: req.file ? `${backendUrl}/uploads/${req.file.filename}` : null,
       videoUrl: req.body.videoUrl || null,
     });
@@ -45,28 +44,22 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Get news by ID
-router.get("/:id", async (req, res) => {
-  try {
-    const news = await News.findById(req.params.id);
-    if (!news) return res.status(404).json({ error: "News not found" });
-    res.json(news);
-  } catch (err) {
-    res.status(500).json({ error: "News not found" });
-  }
-});
-
-// Shareable news page (for WhatsApp/Facebook previews)
+// Shareable news page for WhatsApp/Facebook
 router.get("/share/:id", async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
     if (!news) return res.status(404).send("News not found");
 
-    const imageUrl = news.imageUrl || `${backendUrl}/default-image.png`;
+    // OG image logic
+    let ogImage = news.imageUrl || `${backendUrl}/default-image.png`;
     const shortDesc = news.description.length > 150
       ? news.description.substring(0, 147) + "..."
       : news.description;
 
+    // URL to actual news page on your frontend
+    const newsPageUrl = `${backendUrl}/news/${news._id}`;
+
+    // HTML with OG meta tags and instant redirect
     const html = `
       <!doctype html>
       <html lang="en">
@@ -79,24 +72,25 @@ router.get("/share/:id", async (req, res) => {
         <meta property="og:type" content="article" />
         <meta property="og:title" content="${news.title}" />
         <meta property="og:description" content="${shortDesc}" />
-        <meta property="og:image" content="${imageUrl}" />
-        <meta property="og:url" content="${backendUrl}/api/news/share/${news._id}" />
+        <meta property="og:image" content="${ogImage}" />
+        <meta property="og:url" content="${newsPageUrl}" />
 
         <!-- Twitter Card -->
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="${news.title}" />
         <meta name="twitter:description" content="${shortDesc}" />
-        <meta name="twitter:image" content="${imageUrl}" />
+        <meta name="twitter:image" content="${ogImage}" />
+
+        <!-- Redirect user to actual news page -->
+        <meta http-equiv="refresh" content="0; url=${newsPageUrl}" />
       </head>
       <body>
-        <h2>${news.title}</h2>
-        <p>${news.description}</p>
-        <img src="${imageUrl}" width="300" />
-        ${news.videoUrl ? `<iframe width="400" height="250" src="${news.videoUrl}" title="video" frameborder="0" allowfullscreen></iframe>` : ""}
+        <p>Redirecting to <a href="${newsPageUrl}">${news.title}</a>...</p>
       </body>
       </html>
     `;
     res.send(html);
+
   } catch (err) {
     console.error(err);
     res.status(500).send("Error generating preview");
