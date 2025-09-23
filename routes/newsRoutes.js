@@ -6,7 +6,7 @@ const News = require("../models/News");
 const router = express.Router();
 
 // Serve uploads publicly (this ensures URLs like https://yourdomain.com/uploads/filename.png work)
-router.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+router.use("/uploads", express.static(path.join(__dirname, "./uploads")));
 
 const backendUrl = process.env.BACKEND_URL || "https://backendnews-h3lh.onrender.com";
 
