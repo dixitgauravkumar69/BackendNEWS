@@ -16,34 +16,37 @@ cloudinary.config({
 // ✅ Multer Cloudinary Storage
 const storage = new CloudinaryStorage({
   cloudinary,
-  params: async (req, file) => ({
-    folder: "news_uploads",
-    resource_type: file.mimetype.startsWith("video") ? "video" : "image",
-    public_id: Date.now().toString()
-  }),
+  params: async (req, file) => {
+    const isVideo = file.mimetype.startsWith("video");
+    return {
+      folder: "news_uploads",
+      resource_type: "auto", // auto handles both image + video
+      public_id: Date.now().toString(),
+      format: isVideo ? "mp4" : undefined, // enforce mp4 for video
+    };
+  },
 });
+
 const upload = multer({ storage });
 
 // ✅ Upload news (image + video)
 router.post("/", upload.fields([{ name: "image" }, { name: "video" }]), async (req, res) => {
   try {
-    // Properly log uploaded files
     console.log("Uploaded files:", JSON.stringify(req.files, null, 2));
 
     const news = new News({
       title: req.body.title,
       description: req.body.description,
-      image: req.files?.image?.[0]?.path || "",
-      video: req.files?.video?.[0]?.path || ""
+      imageUrl: req.files?.image?.[0]?.path || "",
+      videoUrl: req.files?.video?.[0]?.path || "",
     });
 
     await news.save();
     res.status(201).json(news);
   } catch (err) {
-  console.error("Upload error:", err); // pure object
-  res.status(500).json({ error: err.message, stack: err.stack });
-}
-
+    console.error("Upload error:", err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ✅ Get all news
@@ -62,22 +65,33 @@ router.get("/:id/preview", async (req, res) => {
     const news = await News.findById(req.params.id);
     if (!news) return res.status(404).send("News not found");
 
-    // Escape quotes in description to prevent HTML break
     const descriptionSafe = news.description.replace(/"/g, "&quot;");
 
     res.send(`
-      <html>
+      <!doctype html>
+      <html lang="en">
       <head>
+        <meta charset="utf-8">
+        <title>${news.title}</title>
+        
+        <!-- Open Graph -->
         <meta property="og:title" content="${news.title}" />
         <meta property="og:description" content="${descriptionSafe}" />
-        <meta property="og:image" content="${news.image}" />
+        <meta property="og:image" content="${news.imageUrl}" />
         <meta property="og:url" content="https://backendnews-h3lh.onrender.com/news/${news._id}" />
-        <meta property="og:type" content="website" />
+        <meta property="og:type" content="article" />
+
+        <!-- Twitter -->
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="${news.title}" />
+        <meta name="twitter:description" content="${descriptionSafe}" />
+        <meta name="twitter:image" content="${news.imageUrl}" />
+        
+        <!-- Auto redirect -->
+        <meta http-equiv="refresh" content="0; url=https://frontend-news-tau.vercel.app/news/${news._id}" />
       </head>
       <body>
-        <script>
-          window.location.href="https://frontend-news-tau.vercel.app/${news._id}"
-        </script>
+        <p>Redirecting to <a href="https://frontend-news-tau.vercel.app/news/${news._id}">${news.title}</a>...</p>
       </body>
       </html>
     `);
