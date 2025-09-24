@@ -29,15 +29,17 @@ const storage = new CloudinaryStorage({
 const upload = multer({ storage });
 
 // ✅ Upload news (image + video)
-router.post("/", upload.fields([{ name: "image" }, { name: "video" }]), async (req, res) => {
+router.post("/", upload.fields([{ name: "image", maxCount: 1 }, { name: "video", maxCount: 1 }]), async (req, res) => {
   try {
-    console.log("Uploaded files:", JSON.stringify(req.files, null, 2));
+    if (!req.files?.image?.[0]) {
+      return res.status(400).json({ error: "Image is required" });
+    }
 
     const news = new News({
       title: req.body.title,
       description: req.body.description,
-      image: req.files?.image?.[0]?.path || "",
-      video: req.files?.video?.[0]?.path || "",
+      image: req.files.image[0].path,
+      video: req.files?.video?.[0]?.path || "", // optional
     });
 
     await news.save();
@@ -47,7 +49,6 @@ router.post("/", upload.fields([{ name: "image" }, { name: "video" }]), async (r
     res.status(500).json({ error: err.message });
   }
 });
-
 // ✅ Get all news
 router.get("/", async (req, res) => {
   try {
