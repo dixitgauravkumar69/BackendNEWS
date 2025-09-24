@@ -37,8 +37,8 @@ router.post("/", upload.fields([{ name: "image" }, { name: "video" }]), async (r
     const news = new News({
       title: req.body.title,
       description: req.body.description,
-      imageUrl: req.files?.image?.[0]?.path || "",
-      videoUrl: req.files?.video?.[0]?.path || "",
+      image: req.files?.image?.[0]?.path || "",
+      video: req.files?.video?.[0]?.path || "",
     });
 
     await news.save();
@@ -77,7 +77,7 @@ router.get("/:id/preview", async (req, res) => {
         <!-- Open Graph -->
         <meta property="og:title" content="${news.title}" />
         <meta property="og:description" content="${descriptionSafe}" />
-        <meta property="og:image" content="${news.imageUrl}" />
+        <meta property="og:image" content="${news.image}" />
         <meta property="og:url" content="https://backendnews-h3lh.onrender.com/news/${news._id}" />
         <meta property="og:type" content="article" />
 
@@ -85,7 +85,7 @@ router.get("/:id/preview", async (req, res) => {
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="${news.title}" />
         <meta name="twitter:description" content="${descriptionSafe}" />
-        <meta name="twitter:image" content="${news.imageUrl}" />
+        <meta name="twitter:image" content="${news.image}" />
         
         <!-- Auto redirect -->
         <meta http-equiv="refresh" content="0; url=https://frontend-news-tau.vercel.app/news/${news._id}" />
