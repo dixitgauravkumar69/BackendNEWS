@@ -20,9 +20,8 @@ const storage = new CloudinaryStorage({
     const isVideo = file.mimetype.startsWith("video");
     return {
       folder: "news_uploads",
-      resource_type: "auto", // auto handles both image + video
+      resource_type: isVideo ? "video" : "image", // explicitly set video
       public_id: Date.now().toString(),
-      format: isVideo ? "mp4" : undefined, // enforce mp4 for video
     };
   },
 });
@@ -73,7 +72,7 @@ router.get("/:id/preview", async (req, res) => {
       <head>
         <meta charset="utf-8">
         <title>${news.title}</title>
-        
+
         <!-- Open Graph -->
         <meta property="og:title" content="${news.title}" />
         <meta property="og:description" content="${descriptionSafe}" />
@@ -86,7 +85,7 @@ router.get("/:id/preview", async (req, res) => {
         <meta name="twitter:title" content="${news.title}" />
         <meta name="twitter:description" content="${descriptionSafe}" />
         <meta name="twitter:image" content="${news.image}" />
-        
+
         <!-- Auto redirect -->
         <meta http-equiv="refresh" content="0; url=https://frontend-news-tau.vercel.app/news/${news._id}" />
       </head>
