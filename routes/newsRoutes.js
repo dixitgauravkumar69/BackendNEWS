@@ -55,8 +55,8 @@ router.get("/", async (req, res) => {
   }
 });
 
+
 // Preview route for WhatsApp / OG tags
-// Get news by ID and show as HTML card
 router.get("/:id", async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
@@ -65,11 +65,27 @@ router.get("/:id", async (req, res) => {
     const titleSafe = news.title.replace(/"/g, "&quot;");
     const descSafe = news.description.replace(/"/g, "&quot;");
 
+    const url = `https://backendnews-h3lh.onrender.com/news/${news._id}`;
+
     res.send(`<!doctype html>
       <html lang="en">
       <head>
         <meta charset="utf-8">
         <title>${titleSafe}</title>
+
+        <!-- ✅ OG Tags (WhatsApp, FB, Twitter ke liye) -->
+        <meta property="og:title" content="${titleSafe}" />
+        <meta property="og:description" content="${descSafe.substring(0, 150)}..." />
+        <meta property="og:image" content="${news.image}" />
+        <meta property="og:url" content="${url}" />
+        <meta property="og:type" content="article" />
+
+        <!-- Twitter cards bhi cover ho jaye -->
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="${titleSafe}" />
+        <meta name="twitter:description" content="${descSafe.substring(0, 150)}..." />
+        <meta name="twitter:image" content="${news.image}" />
+
         <style>
           body { font-family: Arial, sans-serif; background: #f5f5f5; display: flex; justify-content: center; padding: 30px; }
           .card { background: #fff; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 600px; overflow: hidden; }
@@ -96,6 +112,7 @@ router.get("/:id", async (req, res) => {
     res.status(500).send("Server error");
   }
 });
+
 
 
 
