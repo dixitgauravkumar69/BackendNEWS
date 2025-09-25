@@ -56,7 +56,7 @@ router.get("/", async (req, res) => {
 });
 
 // Preview route for WhatsApp / OG tags
-router.get("/:id/preview", async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
     if (!news) return res.status(404).send("News not found");
