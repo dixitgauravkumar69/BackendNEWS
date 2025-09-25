@@ -61,37 +61,9 @@ router.get("/:id", async (req, res) => {
     const news = await News.findById(req.params.id);
     if (!news) return res.status(404).send("News not found");
 
-    const titleSafe = news.title.replace(/"/g, "&quot;");
-    const descSafe = news.description.replace(/"/g, "&quot;");
+    res.send(news);
 
-    res.send(`<!doctype html>
-      <html lang="en">
-      <head>
-        <meta charset="utf-8">
-        <title>${titleSafe}</title>
-
-        <!-- Open Graph -->
-        <meta property="og:title" content="${titleSafe}" />
-        <meta property="og:description" content="${descSafe}" />
-        <meta property="og:image" content="${news.image}" />
-        ${news.video ? `<meta property="og:video" content="${news.video}" />` : ""}
-        <meta property="og:type" content="article" />
-        <meta property="og:url" content="https://backendnews-h3lh.onrender.com/news/${news._id}/preview" />
-
-        <!-- Twitter -->
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="${titleSafe}" />
-        <meta name="twitter:description" content="${descSafe}" />
-        <meta name="twitter:image" content="${news.image}" />
-        ${news.video ? `<meta name="twitter:player" content="${news.video}" />` : ""}
-
-        <!-- Redirect to frontend -->
-        <meta http-equiv="refresh" content="0;url=https://frontend-news-tau.vercel.app/news/${news._id}" />
-      </head>
-      <body>
-        <p>Redirecting to <a href="https://frontend-news-tau.vercel.app/news/${news._id}">${titleSafe}</a>...</p>
-      </body>
-      </html>`);
+   
   } catch (err) {
     console.error("Preview error:", err);
     res.status(500).json({ error: err.message });
