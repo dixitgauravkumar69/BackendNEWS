@@ -56,19 +56,47 @@ router.get("/", async (req, res) => {
 });
 
 // Preview route for WhatsApp / OG tags
+// Get news by ID and show as HTML card
 router.get("/:id", async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
     if (!news) return res.status(404).send("News not found");
 
-    res.send(news);
+    const titleSafe = news.title.replace(/"/g, "&quot;");
+    const descSafe = news.description.replace(/"/g, "&quot;");
 
-   
+    res.send(`<!doctype html>
+      <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <title>${titleSafe}</title>
+        <style>
+          body { font-family: Arial, sans-serif; background: #f5f5f5; display: flex; justify-content: center; padding: 30px; }
+          .card { background: #fff; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 600px; overflow: hidden; }
+          .card img { width: 100%; display: block; }
+          .card .content { padding: 20px; }
+          .card h2 { margin: 0 0 10px; font-size: 24px; }
+          .card p { font-size: 16px; color: #555; }
+          .card video { width: 100%; margin-top: 15px; border-radius: 5px; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          ${news.image ? `<img src="${news.image}" alt="${titleSafe}" />` : ""}
+          <div class="content">
+            <h2>${titleSafe}</h2>
+            <p>${descSafe}</p>
+            ${news.video ? `<video controls src="${news.video}"></video>` : ""}
+          </div>
+        </div>
+      </body>
+      </html>`);
   } catch (err) {
-    console.error("Preview error:", err);
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).send("Server error");
   }
 });
+
 
 
 module.exports = router;
